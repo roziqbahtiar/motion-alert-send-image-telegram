@@ -1,9 +1,9 @@
 
 // ESP32 Cam Motion Alert | Send Image to Telegram
-
+// by roziqbahtiar | techarea.co.id
 // Enter your WiFi ssid and password
-const char* ssid = "Techarea - Software Developer";//"techarea.co.id";
-const char* password = "cintapertama";//"12345678";
+const char* ssid = "Techarea - Software Developer";
+const char* password = "cintapertama";
 String token = "1290796428:AAEhHO6OjUic-JLbjAIK-VQflCb0PDg1ltA";
 String chat_id = "31892588";
 
@@ -36,6 +36,7 @@ String chat_id = "31892588";
 
 
 int gpioPIR = 13;   //PIR Motion Sensor
+
 //buzzer initializing
 int buzzer_pin = 15;
 int channel = 4;
@@ -158,7 +159,8 @@ void loop(){
     done = 1;
     buzz = 1;
 //    xTaskCreatePinnedToCore(alerttelegram, "telegram", 10000, NULL, 1, &dobitaobyte2, 0);
-   xTaskCreatePinnedToCore(Task1code, "siren", 10000, NULL, 1, &dobitaobyte, 1);
+   xTaskCreatePinnedToCore(buzzer, "siren", 10000, NULL, 1, &dobitaobyte, 1);
+//   xTaskCreatePinnedToCore(sirine, "siren", 10000, NULL, 1, &dobitaobyte, 1);
     delay(100);
     alerts2Telegram(token, chat_id, "Gambar 1");
 //    delay(100);
@@ -206,9 +208,32 @@ void testClient(const char * host, uint16_t port) {
   Serial.println("closing connection\n");
   client.stop();
 }
-//
-//Task1c
-void Task1code( void * pvParameters ){
+//end
+
+//sirine tone
+void sirine (void *pvParameters) {
+    float sinVal;
+    int toneVal;
+    for (byte t = 0; t <10; t ++) {
+        for (byte x = 0; x <180; x ++) {
+            // convert degrees to radians
+            sinVal = (sin (x * (3.1412 / 180)));
+            // now generates a frequency
+            toneVal = 2000+ (int (sinVal * 100));
+            // touches the value in the buzzer
+            ledcWriteTone (channel, toneVal);
+            // 2ms delay and generates new tone
+            delay (4);
+        }
+    }
+    ledcWriteTone (channel, 0);
+    vTaskDelete (NULL);
+}
+//end sirine tone
+
+
+//Buzzer function 
+void buzzer( void * pvParameters ){
     Serial.print("Task2 running on core ");
     Serial.println(xPortGetCoreID());
     float sinVal;
@@ -217,33 +242,22 @@ void Task1code( void * pvParameters ){
   for (byte t = 0; t <60; t ++) {
       ledcWriteTone (channel, 1000);
       delay(100);
-      ledcWriteTone (channel, 2000);
+      ledcWriteTone (channel, 4000);
       delay(100);
       ledcWriteTone (channel, 0);
   }
   ledcWriteTone (channel, 0);
   vTaskDelete(NULL);
 }
-
-void alerttelegram(void *pvParameters){
-    Serial.print("Task1 running on core ");
-    Serial.println(xPortGetCoreID());
-//    sendPhotoTelegram();
-//    alerts2Telegram(token, chat_id);
-    done = 0;
-    vTaskDelete(NULL);
-}
+//buzzer end
 
 String alerts2Telegram(String token, String chat_id, String caption) {
   const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
 
   camera_fb_t *fb = NULL;
-  
-    Serial.println("captured2");
-    
   fb = esp_camera_fb_get();  
-    Serial.println("captured1");
+  
   if(!fb) {
     Serial.println("Camera capture failed");
     delay(1000);
@@ -254,11 +268,7 @@ String alerts2Telegram(String token, String chat_id, String caption) {
   }
   
   WiFiClientSecure client_tcp;
-
-//  WiFiClient client_tcp;
-  
   client_tcp.connect(myDomain, 443);
-   //server_status = client.connected();
   int countAttemp = 0;
   while(!client_tcp.connected() && countAttemp<10){
      client_tcp.stop();
@@ -268,6 +278,7 @@ String alerts2Telegram(String token, String chat_id, String caption) {
      Serial.println("Try Connecting...");
      delay(500);
   }
+  
   if (client_tcp.connected()) {
     Serial.println("Connected to " + String(myDomain));
     
