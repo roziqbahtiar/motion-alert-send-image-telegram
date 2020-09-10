@@ -2,17 +2,16 @@
 // ESP32 Cam Motion Alert | Send Image to Telegram
 // by roziqbahtiar | techarea.co.id
 // Enter your WiFi ssid and password
-const char* ssid = "Techarea - Software Developer";
-const char* password = "cintapertama";
-String token = "1290796428:AAEhHO6OjUic-JLbjAIK-VQflCb0PDg1ltA";
-String chat_id = "31892588";
+const char* ssid = "Boomer";
+const char* password = "123456789";
+String token = "1204992170:AAF55fvb0AwHIS-JI25GQTVfzUANW3S_6dc";//"1290796428:AAEhHO6OjUic-JLbjAIK-VQflCb0PDg1ltA";
+String chat_id = "1289726362";//"31892588";
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "esp_camera.h"
-#include <UniversalTelegramBot.h>
 
 //UniversalTelegramBot bot(BOTtoken, client);
 
@@ -34,18 +33,46 @@ String chat_id = "31892588";
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
+#define TELEGRAM_HOST "api.telegram.org"
+#define TELEGRAM_SSL_PORT 443
+WiFiClientSecure client_tcp;
+
+const char* root_ca = \
+"-----BEGIN CERTIFICATE-----\n" \ 
+"MIIDxTCCAq2gAwIBAgIBADANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx\n" \
+"EDAOBgNVBAgTB0FyaXpvbmExEzARBgNVBAcTClNjb3R0c2RhbGUxGjAYBgNVBAoT\n" \
+"EUdvRGFkZHkuY29tLCBJbmMuMTEwLwYDVQQDEyhHbyBEYWRkeSBSb290IENlcnRp\n" \
+"ZmljYXRlIEF1dGhvcml0eSAtIEcyMB4XDTA5MDkwMTAwMDAwMFoXDTM3MTIzMTIz\n" \
+"NTk1OVowgYMxCzAJBgNVBAYTAlVTMRAwDgYDVQQIEwdBcml6b25hMRMwEQYDVQQH\n" \
+"EwpTY290dHNkYWxlMRowGAYDVQQKExFHb0RhZGR5LmNvbSwgSW5jLjExMC8GA1UE\n" \
+"AxMoR28gRGFkZHkgUm9vdCBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkgLSBHMjCCASIw\n" \
+"DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL9xYgjx+lk09xvJGKP3gElY6SKD\n" \
+"E6bFIEMBO4Tx5oVJnyfq9oQbTqC023CYxzIBsQU+B07u9PpPL1kwIuerGVZr4oAH\n" \
+"/PMWdYA5UXvl+TW2dE6pjYIT5LY/qQOD+qK+ihVqf94Lw7YZFAXK6sOoBJQ7Rnwy\n" \
+"DfMAZiLIjWltNowRGLfTshxgtDj6AozO091GB94KPutdfMh8+7ArU6SSYmlRJQVh\n" \
+"GkSBjCypQ5Yj36w6gZoOKcUcqeldHraenjAKOc7xiID7S13MMuyFYkMlNAJWJwGR\n" \
+"tDtwKj9useiciAF9n9T521NtYJ2/LOdYq7hfRvzOxBsDPAnrSTFcaUaz4EcCAwEA\n" \
+"AaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE\n" \
+"FDqahQcQZyi27/a9BUFuIMGU2g/eMA0GCSqGSIb3DQEBCwUAA4IBAQCZ21151fmX\n" \
+"WWcDYfF+OwYxdS2hII5PZYe096acvNjpL9DbWu7PdIxztDhC2gV7+AJ1uP2lsdeu\n" \
+"9tfeE8tTEH6KRtGX+rcuKxGrkLAngPnon1rpN5+r5N9ss4UXnT3ZJE95kTXWXwTr\n" \
+"gIOrmgIttRD02JDHBHNA7XIloKmf7J6raBKZV8aPEjoJpL1E/QYVN8Gb5DKj7Tjo\n" \
+"2GTzLH4U/ALqn83/B2gX2yKQOC16jdFU8WnjXzPKej17CuPKf1855eJ1usV2GDPO\n" \
+"LPAvTK33sefOT6jEm0pUBsV/fdUID+Ic/n4XuKxe9tQWskMJDE32p2u0mYRlynqI\n" \
+"4uJEvlz36hz1\n" \
+"-----END CERTIFICATE-----\n";
+
 
 int gpioPIR = 13;   //PIR Motion Sensor
 
 //buzzer initializing
 int buzzer_pin = 15;
-int channel = 4;
-int frequence = 8000;
+int channel = 2;
+int frequence = 2000;
 int resolution_buzzer = 8;
 //unsigned long timer = millis ();
 
 int done = 0, buzz = 0;
-WiFiClientSecure clientTCP;
 
 TaskHandle_t dobitaobyte, dobitaobyte2;
 eTaskState statusOf;
@@ -81,26 +108,26 @@ void setup()
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Reset");
     
-    ledcAttachPin(4, 3);
-    ledcSetup(3, 5000, 8);
-    ledcWrite(3,10);
-    delay(200);
-    ledcWrite(3,0);
-    delay(200);    
-    ledcDetachPin(3);
-    delay(1000);
+//    ledcAttachPin(4, 3);
+//    ledcSetup(3, 5000, 8);
+//    ledcWrite(3,10);
+//    delay(200);
+//    ledcWrite(3,0);
+//    delay(200);    
+//    ledcDetachPin(3);
+//    delay(1000);
     ESP.restart();
   }
   else {
-    ledcAttachPin(4, 3);
-    ledcSetup(3, 5000, 8);
-    for (int i=0;i<5;i++) {
-      ledcWrite(3,10);
-      delay(200);
-      ledcWrite(3,0);
-      delay(200);    
-    }
-    ledcDetachPin(3);      
+//    ledcAttachPin(4, 3);
+//    ledcSetup(3, 5000, 8);
+//    for (int i=0;i<5;i++) {
+//      ledcWrite(3,10);
+//      delay(200);
+//      ledcWrite(3,0);
+//      delay(200);    
+//    }
+//    ledcDetachPin(3);      
   }
 
   camera_config_t config;
@@ -159,12 +186,11 @@ void loop(){
     done = 1;
     buzz = 1;
 //    xTaskCreatePinnedToCore(alerttelegram, "telegram", 10000, NULL, 1, &dobitaobyte2, 0);
-   xTaskCreatePinnedToCore(buzzer, "siren", 10000, NULL, 1, &dobitaobyte, 1);
-//   xTaskCreatePinnedToCore(sirine, "siren", 10000, NULL, 1, &dobitaobyte, 1);
+   xTaskCreatePinnedToCore(buzzer, "siren", 8000, NULL, 0, &dobitaobyte, 1);
     delay(100);
     alerts2Telegram(token, chat_id, "Gambar 1");
-//    delay(100);
-//    alerts2Telegram(token, chat_id, "Gambar 2");
+    delay(100);
+    alerts2Telegram(token, chat_id, "Gambar 2");
     delay(10000); 
    
     if(done == 1) {
@@ -210,27 +236,6 @@ void testClient(const char * host, uint16_t port) {
 }
 //end
 
-//sirine tone
-void sirine (void *pvParameters) {
-    float sinVal;
-    int toneVal;
-    for (byte t = 0; t <10; t ++) {
-        for (byte x = 0; x <180; x ++) {
-            // convert degrees to radians
-            sinVal = (sin (x * (3.1412 / 180)));
-            // now generates a frequency
-            toneVal = 2000+ (int (sinVal * 100));
-            // touches the value in the buzzer
-            ledcWriteTone (channel, toneVal);
-            // 2ms delay and generates new tone
-            delay (4);
-        }
-    }
-    ledcWriteTone (channel, 0);
-    vTaskDelete (NULL);
-}
-//end sirine tone
-
 
 //Buzzer function 
 void buzzer( void * pvParameters ){
@@ -238,8 +243,8 @@ void buzzer( void * pvParameters ){
     Serial.println(xPortGetCoreID());
     float sinVal;
     int toneVal;
-    
-  for (byte t = 0; t <60; t ++) {
+    delay(100);
+  for (byte t = 0; t <10; t ++) {
       ledcWriteTone (channel, 1000);
       delay(100);
       ledcWriteTone (channel, 4000);
@@ -252,7 +257,7 @@ void buzzer( void * pvParameters ){
 //buzzer end
 
 String alerts2Telegram(String token, String chat_id, String caption) {
-  const char* myDomain = "api.telegram.org";
+//  const char* myDomain = "api.telegram.org";
   String getAll="", getBody = "";
 
   camera_fb_t *fb = NULL;
@@ -267,20 +272,26 @@ String alerts2Telegram(String token, String chat_id, String caption) {
     Serial.println("captured");
   }
   
-  WiFiClientSecure client_tcp;
-  client_tcp.connect(myDomain, 443);
+
+  client_tcp.flush();
+  
+  client_tcp.setCACert(root_ca);
+  client_tcp.connect(TELEGRAM_HOST, TELEGRAM_SSL_PORT);
   int countAttemp = 0;
-  while(!client_tcp.connected() && countAttemp<10){
+  Serial.print(client_tcp.available());
+  Serial.println(client_tcp.connected());
+  while(!client_tcp.connected() && countAttemp<20){
      client_tcp.stop();
-     client_tcp.connect(myDomain, 443);
+     client_tcp.connect(TELEGRAM_HOST, 443);
      countAttemp++;
      Serial.print(countAttemp);
      Serial.println("Try Connecting...");
      delay(500);
   }
+
   
   if (client_tcp.connected()) {
-    Serial.println("Connected to " + String(myDomain));
+    Serial.println("Connected to " + String(TELEGRAM_HOST));
     
     String head = "--Indonesia\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + chat_id + "\r\n";
     head = head + "--Indonesia\r\nContent-Disposition: form-data; name=\"caption\"; \r\n\r\n" + caption + "\r\n";
@@ -292,7 +303,7 @@ String alerts2Telegram(String token, String chat_id, String caption) {
     uint16_t totalLen = imageLen + extraLen;
   
     client_tcp.println("POST /bot"+token+"/sendPhoto HTTP/1.1");
-    client_tcp.println("Host: " + String(myDomain));
+    client_tcp.println("Host: " + String(TELEGRAM_HOST));
     client_tcp.println("Content-Length: " + String(totalLen));
     client_tcp.println("Content-Type: multipart/form-data; boundary=Indonesia");
     client_tcp.println();
@@ -337,8 +348,11 @@ String alerts2Telegram(String token, String chat_id, String caption) {
        }
        if (getBody.length()>0) break;
     }
+    
+    client_tcp.flush();
     client_tcp.stop();
     Serial.println(getBody);
+    
   }
   else {
     esp_camera_fb_return(fb);
